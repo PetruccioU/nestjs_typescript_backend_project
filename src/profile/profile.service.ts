@@ -29,7 +29,9 @@ export class ProfileService {
     async createUser(dto: CreateUserDto, dtoProfile: UpdateProfileDto) {      // Функция принимает параметр dto, ждет объект класса CreateUserDto.
         const user = await this.userRepository.create(dto);                   // Обращаемся к нашей базе данных и передаем ей объект dto для создания пользователя.
         const role = await this.roleService.getRoleByValue('USER');       // при создании пользователя по умолчанию добавим ему роль USER (заранее добавив роль USER в таблицу roles).
-        await user.update({ Id_role: role.Id_role });                      //  Обновляем значение роли в таблице пользователей
+        await user.$set('roles', [role.Id_role])
+        user.roles = [role]
+        //await user.update({ Id_role: role.Id_role, roles: [role] });                      //  Обновляем значение роли в таблице пользователей
         if (!dtoProfile){const profile = await this.profileRepository.create({});   // Если dto пустое создаём пользователю пустой профиль.
             await profile.update({ ID_user: user.ID_user });                               // Обновляем значение поля ID_user в таблице профилей, на id нового пользователя.
             return user;

@@ -3,37 +3,36 @@
 // npm install --save pg pg-hstore
 // npm install --save-dev @types/sequelize
 
-import {Column, DataType, Model, Table} from "sequelize-typescript";
+import {BelongsTo, ForeignKey, Column, DataType, HasOne, Model, Table} from "sequelize-typescript";
 import {ApiProperty} from "@nestjs/swagger";
+import {User} from "../users/users.model";
 
 // Добавим интерфейс для описания полей, нужных для создания объектов класса User
-interface UserCreationAttrs{
-    email:string,
-    password:string,
+interface RoleCreationAttrs{
+    value:string,
+    description:string,
+    ID_user: number,
 }
 
-
-// Опишем модель того, как пользователь будет сохраняться в базе данных
-@Table({tableName: 'users'})       // Пометим класс декоратором Table, чтобы класс стал таблицей в БД
-export class User extends Model<User, UserCreationAttrs> { // Укажем как дженерик сам этот класс дженерики,
+// Опишем модель ролей
+@Table({tableName: 'roles'})       // Пометим класс декоратором Table, чтобы класс стал таблицей в БД
+export class Role extends Model<Role, RoleCreationAttrs> { // Укажем как дженерик сам этот класс и интерфейс RoleCreationAttrs
 
     @ApiProperty({example: '1', description : 'Unique ident' })
     @Column({type: DataType.INTEGER, unique:true, autoIncrement: true, primaryKey:true})  // Чтобы эти поля стали полями таблицы в БД, пометим их декоратором Column
-    id: number;
+    Id_role: number;
 
-    @ApiProperty({example: 'user@gmail.com', description : 'Unique email' })
+    @ApiProperty({example: 'ADMIN', description : 'Users role' })
     @Column({type: DataType.STRING, unique:true, allowNull: false})
-    email: string;
+    value: string;
 
-    @ApiProperty({example: '123qwe', description : 'Users password' })
+    @ApiProperty({example: 'Administrator', description : 'Role descriptions' })
     @Column({type: DataType.STRING, allowNull: false})
-    password: string;
+    description: string;
 
-    @ApiProperty({example: 'true', description : 'Is user banned?' })
-    @Column({type: DataType.BOOLEAN, defaultValue: false})
-    banned: boolean;
-
-    @ApiProperty({example: 'For vulgar language', description : 'Reason' })
-    @Column({type: DataType.STRING, allowNull: true})
-    banReason: string;
+    @HasOne(() => User)
+    user: User[];
 }
+
+
+

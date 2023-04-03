@@ -44,7 +44,7 @@ export class AuthService {
         } catch (error) {
             console.error('При отправке активационной ссылки, произошла ошибка:', error);
         }
-        const tokens = await this.tokenService.generateTokens({...userDto});   // Генерируем токены из объекта класса CreateUserDto
+        const tokens = await this.tokenService.generateTokens({email:user.email, password: user.password, roles: user.roles});   // Генерируем токены из объекта класса CreateUserDto   ...user.roles, {...user.dataValues}
         await this.tokenService.saveToken(user.ID_user, tokens.refreshToken);    // Запишем refreshToken в табличку token
         console.log(`Зарегистрирован пользователь ${user.ID_user}`)
         return {...tokens, user}  // Возвращаем токены и пользователя
@@ -158,11 +158,4 @@ export class AuthService {
     }
 
 }
-
-// import {UsersService} from "../users/users.service";
-// import * as MailService from "./mail.service/mail.service";
-// const MailService = require('./mail.service/mail.service');
-// import {CreateProfileDto} from "../profile/dto/create-profile.dto";
-// import {ApiBadRequestResponse} from "@nestjs/swagger";
-// import {JwtService} from "@nestjs/jwt";
 

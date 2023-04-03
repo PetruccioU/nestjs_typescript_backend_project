@@ -104,8 +104,8 @@ export class AuthController {
     // Администратор может получить всех пользователей:
     @ApiOperation({summary: 'Set users role'})  // Декоратор для swagger.
     @ApiResponse({status: 200})
-    @Roles('ADMIN')                            // Искомая роль из декоратора ролей.
-    @UseGuards(RolesGuard)                         // Используемые гард роли.
+    // @Roles('ADMIN')                            // Искомая роль из декоратора ролей.
+    // @UseGuards(RolesGuard)                     // Используемые гард роли.
     @Get('/get_all_users')                   // Эндпоинт на получение всех пользователей.
     getAllUser() {
         return this.authService.getAllUsers();

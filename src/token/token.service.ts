@@ -77,6 +77,4 @@ export class TokenService {
         console.log(`Токен пользователя удалён`)
         return tokenData
     }
-
-
 }

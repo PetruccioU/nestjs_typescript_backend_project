@@ -5,6 +5,7 @@ import {Profile} from "../profile/profile.model";
 import {Role} from "../roles/roles.model";
 import * as bcrypt from 'bcryptjs';
 import {TokenService} from "../token/token.service";
+import {where} from "sequelize";
 
 // В сервисах размещаем логику, в контроллерах эндпоинты.
 @Injectable()
@@ -25,7 +26,7 @@ export class UsersService {
 
     // Найти всех юзеров.
     async getAllUsers() {
-        const users = await this.userRepository.findAll();
+        const users = await this.userRepository.findAll({include:{all:true}});
         return users;
     }
 
@@ -52,19 +53,16 @@ export class UsersService {
             }
             // Захэшируем пароль администратора.
             const adminHashPassword = await bcrypt.hash(adminPassword, 5);
+            //const role = await this.roleRepository.findOne({where:{Id_role: adminRole.Id_role}});
             // Создаём администратора.
             const payload = {
                 email: adminEmail,
                 password: adminHashPassword,
                 isActivated: true,
                 Id_role: adminRole.Id_role,
+                roles: adminRole,
             };
-            const admin = await this.userRepository.create({...payload
-                // email: adminEmail,
-                // password: adminHashPassword,
-                // isActivated: true,
-                // Id_role: adminRole.Id_role,
-            });
+            const admin = await this.userRepository.create({...payload});
             const tokens = await this.tokenService.generateTokens(payload); // Сгенерируем для администратора токены.
             await this.tokenService.saveToken(1, tokens.refreshToken);    // Сохраним refreshToken администратора.
             console.log('Администратор успешно создан');
