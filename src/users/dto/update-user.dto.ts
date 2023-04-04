@@ -5,6 +5,7 @@ import {Profile} from "../../profile/profile.model";
 
 export class UpdateUserDto{
 
+
     @ApiProperty({example: 'user@gmail.com', description : 'Unique email' })
     readonly email: string;
 

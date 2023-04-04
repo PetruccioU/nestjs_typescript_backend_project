@@ -25,6 +25,8 @@ import {TextBlock} from "./text_block/text_block.model";
 import {Files} from "./files/files.model";
 import {MailModule} from "./auth/mail.service/mail.module";
 import {JwtService} from "@nestjs/jwt";
+import {JwtAuthGuard} from "./auth/guard/jwt-auth.strategy";
+import {AdminOrMyselfGuard} from "./auth/guard/admin_or_myself.guard";   // import { JwtAuthGuard } from './guard/jwt.strategy';
 
 // Создадим и экспортируем модуль AppModule, пометим его декоратором @Module.
 // @Module принимает в себя providers, controllers, imports, exports.
@@ -36,10 +38,19 @@ import {JwtService} from "@nestjs/jwt";
     // Провайдеры - переиспользуемые компоненты приложения, сервисы с логикой, имплементации паттернов.   //AppService.
     providers: [
         {
-        provide: APP_GUARD,
-        useClass: RolesGuard,
+            provide: APP_GUARD,
+            useClass: RolesGuard,
         },
-        JwtService
+        // {
+        //     provide: APP_GUARD,
+        //     useClass: JwtAuthGuard,
+        // },
+        // {
+        //     provide: APP_GUARD,
+        //     useClass: AdminOrMyselfGuard,
+        // },
+        JwtService,
+        //JwtAuthGuard
     ],
 
     // Модули необходимые для работы приложения.
@@ -81,6 +92,7 @@ import {JwtService} from "@nestjs/jwt";
         TextBlockModule,
         FilesModule,
         MailModule,
-        TokenModule,]
+        TokenModule,
+    ]
 })
 export class AppModule{}

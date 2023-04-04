@@ -17,7 +17,7 @@ export class TokenService {
 
     // Сгенерируем токены.
     async generateTokens(payload){   // Payload - это информация, которая будет спрятана в токене.
-        const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {expiresIn: '30m'});      //  Создадим jwt подпись из payload с ключем из переменной окружения JWT_ACCESS_SECRET, это accessToken. Срок жизни токена: 30 минут
+        const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {expiresIn: '60m'});      //  Создадим jwt подпись из payload с ключем из переменной окружения JWT_ACCESS_SECRET, это accessToken. Срок жизни токена: 30 минут
         const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {expiresIn: '30d'});    //  Это refreshToken. Срок жизни токена: 30 дней
         console.log('Создана пара токенов');
         return {    // Возвращаем токены.
@@ -27,7 +27,7 @@ export class TokenService {
     }
 
     // Обновим refreshToken в таблице token, или запишем его первый раз.
-    async saveToken(user_Id, refreshToken){
+    async save_or_refresh_refreshToken(user_Id, refreshToken){
         const tokenData = await this.tokenRepository.findOne({where:{ID_user: user_Id}});  // Ищем токен пользователя по его user_Id.
         if(tokenData){   // Если токен нашёлся, перезаписываем его.
             // tokenData.refreshToken = refreshToken;
@@ -43,10 +43,11 @@ export class TokenService {
     // Проверим accessToken.
     async validateAccessToken(token){
         try {
-            const userData = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-            return userData;
-
+            const userData = jwt.verify(token, process.env.JWT_ACCESS_SECRET);    // Проверяем токен.
+            console.log(`TokenService: Валидирован объект ${JSON.stringify(userData)}`);
+            return userData;    // Если токен валиден возвращаем данные из этого токена переменной userData.
         }catch (e){
+            console.log('TokenService: Ошибка валидации AccessToken')
             console.log(e);
             return null;
         }
@@ -55,10 +56,11 @@ export class TokenService {
     // Проверим refreshToken.
     async validateRefreshToken(token){
         try {
-            const userData = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-            return userData;
-
+            const userData = jwt.verify(token, process.env.JWT_REFRESH_SECRET);   // Проверяем токен.
+            console.log(`TokenService: Валидирован объект ${JSON.stringify(userData)}`);
+            return userData;      // Если токен валиден возвращаем данные из этого токена переменной userData.
         }catch (e){
+            console.log('TokenService: Ошибка валидации RefreshToken')
             console.log(e);
             return null;
         }

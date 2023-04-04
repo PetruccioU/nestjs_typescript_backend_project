@@ -11,7 +11,7 @@ import {
     UseInterceptors
 } from '@nestjs/common';
 import {ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
-import {JwtAuthGuard} from "../auth/guard/jwt-auth.guard";
+import {JwtAuthGuard} from "../auth/guard/jwt-auth.strategy";     //from "../auth/guard/jwt.strategy";
 import {FilesService} from "./files.service";
 import {FileInterceptor} from "@nestjs/platform-express";
 import {Request} from "express";

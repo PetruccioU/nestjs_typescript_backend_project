@@ -21,8 +21,6 @@ async function start(){
     // Подключим мидлвэйр cookie-parser.
     app.use(cookieParser());
 
-    //app.use(nodemailer());
-
     // Создадим изначальные роли и администратора, сервисы ролей и пользователей.
     const rolesService = app.get(RolesService);
     const userService = app.get(UsersService);

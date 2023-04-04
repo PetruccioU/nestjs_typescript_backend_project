@@ -64,8 +64,8 @@ export class UsersService {
             };
             const admin = await this.userRepository.create({...payload});
             const tokens = await this.tokenService.generateTokens(payload); // Сгенерируем для администратора токены.
-            await this.tokenService.saveToken(1, tokens.refreshToken);    // Сохраним refreshToken администратора.
-            console.log('Администратор успешно создан');
+            await this.tokenService.save_or_refresh_refreshToken(1, tokens.refreshToken);    // Сохраним refreshToken администратора.
+            console.log(`Администратор успешно создан, его accessToken: ${JSON.stringify(tokens.accessToken)}`);
             return {...tokens, admin}
         } catch (error) {
             console.error('При создании Администратора произошла ошибка:', error);

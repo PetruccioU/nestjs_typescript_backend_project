@@ -6,7 +6,7 @@ import {JwtModule, JwtService} from "@nestjs/jwt";
 import * as process from "process";
 import { PassportModule } from '@nestjs/passport';
 //import { JwtStrategy } from './guard/jwt.strategy';
-
+import {ConfigModule, ConfigService} from "@nestjs/config";
 import {ProfileModule} from "../profile/profile.module";
 import {TokenModule} from "../token/token.module";
 import {MailService} from "./mail.service/mail.service";
@@ -16,7 +16,9 @@ import {Role} from "../roles/roles.model";
 import {Profile} from "../profile/profile.model";
 import {Token} from "../token/token.model";
 import {MailModule} from "./mail.service/mail.module";
-import {JwtAuthGuard} from "./guard/jwt.strategy";
+import {JwtAuthGuard} from "./guard/jwt-auth.strategy";
+import { JwtStrategy } from './guard/jwt.strategy';
+import {AdminOrMyselfGuard} from "./guard/admin_or_myself.guard";
 
 // $ npm install --save @nestjs/passport passport passport-local
 // $ npm install --save-dev @types/passport-local
@@ -25,20 +27,22 @@ import {JwtAuthGuard} from "./guard/jwt.strategy";
 @Module({
   providers: [AuthService,   // Разрешим для использования в этом модуле свой собственный сервис, и сторонние отдельные сервисы
       JwtAuthGuard,
-      //JwtStrategy,
+      JwtStrategy,
       MailService,
-      //JwtService
+      //JwtService,
+      ConfigService,
+      AdminOrMyselfGuard,
       ],
   controllers: [AuthController],    // Контроллеры этого модуля
   imports:[
       SequelizeModule.forFeature([User,Token,Role,Profile]), // Импортируем модели для работы с их репозиториями
+      UsersModule,   // Импортируем весь UserModule, тк мы экспортировали из него его сервис, он будет доступен в authService
       TokenModule,
       MailModule,
       ProfileModule,
       PassportModule,
-      UsersModule,   // Импортируем весь UserModule, тк мы экспортировали из него его сервис, он будет доступен в authService
       JwtModule.register({     // Для jwt авторизации необходимо зарегистрировать JwtModule
-        secret: process.env.PRIVATE_KEY || 'SECRET',  // Поле секретного ключа, которым будет подписан payload
+        secret: process.env.JWT_SECRET || 'SECRET',  // Поле секретного ключа, которым будет подписан payload
         signOptions:{
           expiresIn: '24h'   // Укажем время жизни токена 24часа
         }
@@ -47,30 +51,6 @@ import {JwtAuthGuard} from "./guard/jwt.strategy";
   exports:[AuthService,JwtModule]
 })
 export class AuthModule {}
-
-
-// import { Module } from '@nestjs/common';
-// import { JwtModule } from '@nestjs/jwt';
-// import { PassportModule } from '@nestjs/passport';
-// import { AuthService } from './auth.service';
-// import { JwtStrategy } from './jwt.strategy';
-// import { AuthController } from './auth.controller';
-// import { UserModule } from '../user/user.module';
-//
-// @Module({
-//     imports: [
-//         UserModule,
-//         PassportModule,
-//         JwtModule.register({
-//             secret: 'mysecretkey',
-//             signOptions: { expiresIn: '60s' },
-//         }),
-//     ],
-//     providers: [AuthService, JwtStrategy],
-//     controllers: [AuthController],
-//     exports: [AuthService],
-// })
-// export class AuthModule {}
-
+// providers: [AuthService, JwtStrategy],
 
 

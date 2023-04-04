@@ -11,6 +11,8 @@ import {UpdateRoleDto} from "../roles/dto/update-role.dto";
 import {UsersService} from "../users/users.service";
 import {CreateProfileDto} from "./dto/create-profile.dto";
 import {UpdateUserDto} from "../users/dto/update-user.dto";
+import * as bcrypt from 'bcryptjs';
+import e from "express";
 
 
 @Injectable()
@@ -29,7 +31,7 @@ export class ProfileService {
     async createUser(dto: CreateUserDto, dtoProfile: UpdateProfileDto) {      // Функция принимает параметр dto, ждет объект класса CreateUserDto.
         const user = await this.userRepository.create(dto);                   // Обращаемся к нашей базе данных и передаем ей объект dto для создания пользователя.
         const role = await this.roleService.getRoleByValue('USER');       // при создании пользователя по умолчанию добавим ему роль USER (заранее добавив роль USER в таблицу roles).
-        await user.$set('roles', [role.Id_role])
+        await user.$set('roles', [role.Id_role])    // !!!!!!!!!!!!!!!!!!!!!!!!!! 'roles', [role.Id_role] -> roles: [role]
         user.roles = [role]
         //await user.update({ Id_role: role.Id_role, roles: [role] });                      //  Обновляем значение роли в таблице пользователей
         if (!dtoProfile){const profile = await this.profileRepository.create({});   // Если dto пустое создаём пользователю пустой профиль.
@@ -42,53 +44,56 @@ export class ProfileService {
     }
 
 
+
+
     // Функции для админа:
     // Создать новую роль.
     async addRole(value, description) {
-        const users = await this.roleRepository.create({value:value, description:description});  // Создаём роль, разворачивая dto
-        return users;
+        const isRole = await this.roleRepository.findOne({where: {value:value}})
+        if (!isRole){const users = await this.roleRepository.create({value:value, description:description});  // Создаём роль, разворачивая dto
+            console.log(`Добавлена роль: ${value}.`)
+            return users;}
+        else {console.log(`Роль: ${value}, уже существует!`)}
     }
 
-    // !!!!!!!!!!!!!  $set
     // Выдать пользователю роль.
     async setRole(dto: UpdateRoleDto){
         const user = await this.userRepository.findByPk(dto.userId);     // Находим пользователя по id, роль которого хотим поменять.
         const role = await this.roleService.getRoleByValue(dto.value);   // Находим роль по ее наименованию из таблички ролей.
         if (role && user) {                    // Проверяем нашлись ли пользователь и роль.
-            await user.$set('Id_role', [role.Id_role]); // в поле roles таблицы пользователей добавим id его новой роли,
-            return dto;  // выведем dto
+            await user.update({ Id_role: role.Id_role });
+            await user.update({ roles: [role] });
+            // await user.$set('Id_role', [role.Id_role]); // в поле roles таблицы пользователей добавим id его новой роли,
+            // await user.$set('roles', [role]);
+            return user//dto;  // выведем dto
         }
         throw new HttpException('Пользователь или роль не найдены', HttpStatus.NOT_FOUND)
     }
 
-
+    // Функции для аутентифицированного пользователя:
+    // Просмотреть профили всех пользователей.
+    getAllProfiles() {
+        return this.profileRepository.findAll();
+        //return Promise.resolve(undefined);
+    }
 
     // Функции для админа или себя:
-    // Обновим пользователя и его профиль.
-    async updateProfile(user, dtoProfile: UpdateProfileDto): Promise<any> {
-        // const user = await this.getUserByEmail(dtoUser.email);
-        // if(!user){
-        //     throw new Error('Пользователь не найден');
-        // }
-        const profile = await this.profileRepository.findOne({ where: { ID_user: user.ID_user } });
-        await profile.update({...dtoProfile});  // .update(dtoProfile);
-        //await user.update(dtoUser);
-        return profile;
+    // Обновим пользователя.
+    async updateUser(id, dtoUser: UpdateUserDto): Promise<any> {
+        const userFind = await this.userRepository.findByPk(id);
+        const hashPassword = await bcrypt.hash(dtoUser.password, 5);
+        await userFind.update({ email: dtoUser.email, password: hashPassword });
+        console.log(`Пользователь ${id} изменён.`)
+        return userFind;
     }
 
     // Удалить пользователя и его профиль
     async deleteUser(id): Promise<void> {
+        if (!id) {
+            throw new Error('ID пользователя не определён.');
+        }
         await this.profileRepository.destroy({where: {ID_user: id}});
         await this.userRepository.destroy({where: {ID_user: id}});
-    }
-
-
-    // // Внутренняя функция:
-    // async getUserByEmail(email: string) {
-    //     const users = await this.userRepository.findOne({where:{email}, include: {all: true}});  // добавим опцию where, чтобы получать пользователя по email
-    //     return users;
-    // }
-    getAllProfiles() {
-        return Promise.resolve(undefined);
+        console.log(`Пользователь ${id} удалён.`)
     }
 }

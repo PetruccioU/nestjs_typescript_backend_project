@@ -2,7 +2,7 @@ import {Body, Controller, Delete, Get, Post, Put, UploadedFile, UseGuards, UseIn
 import {ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {TextBlockService} from "./text_block.service";
 import {FileInterceptor} from "@nestjs/platform-express";
-import {JwtAuthGuard} from "../auth/guard/jwt-auth.guard";
+import {JwtAuthGuard} from "../auth/guard/jwt-auth.strategy";    // from "../auth/guard/jwt.strategy";
 import {RolesGuard} from "../auth/guard/roles.guard";
 import {Roles} from "../auth/guard/roles.decorator";
 import {UpdateTextBlockDto} from "./dto/update-text-block.dto";
