@@ -48,7 +48,7 @@ export class User extends Model<User, UserCreationAttrs> { // Укажем ка�
     Id_role: number;
 
     @BelongsTo(()=>Role) // Создаём связь один к одному между таблицами Role и User, в БД
-    roles: Role[];
+    roles: Role;    // roles: Role[], в случае если хотим иметь как массив, а не объект.
 
     @HasOne(()=>Profile)
     profile: Profile;

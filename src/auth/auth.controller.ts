@@ -148,7 +148,9 @@ export class AuthController {
     @UseGuards(AdminOrMyselfGuard)
     @Put('/update_user')
     async updateUser(@Body()dto, @Req()req) {
-        const user = req.user                             //После проверки accessTokena в JwtAuthGuard, если токен валиден и роль-пользователь, из запроса получим поле user с данными пользователя.
+        const user = req.user;                             //После проверки accessTokena в JwtAuthGuard, если токен валиден и роль-пользователь, из запроса получим поле user с данными пользователя.
+        console.log(`Данные на изменение, user: ${JSON.stringify(user.email)}`);
+        console.log(`Данные на изменение, dto: ${JSON.stringify(dto)}`);
         return this.authService.updateUser(dto, user);
     }
 
@@ -156,9 +158,11 @@ export class AuthController {
     @ApiOperation({summary: 'Delete user'})
     @ApiResponse({status: 200, type: User})
     @UseGuards(AdminOrMyselfGuard)
-    @Delete('/delete')                  // Чтобы сделать функцию эндпоинтом, пометим её декоратором соответствующего HTTP запроса
-    async delete(@Body()dto, @Req()req){           // Делегировали логику методу getAllUsers из сервиса UsersService   @Body() ID_user
-        const user = req.user                //После проверки accessTokena в JwtAuthGuard, если токен валиден, из запроса получим поле user с данными пользователя.
-        return this.authService.deleteUser(dto, user)
+    @Delete('/delete')                  // Чтобы сделать функцию эндпоинтом, пометим её декоратором соответствующего HTTP запроса.
+    async delete(@Body()dto, @Req()req){           // Делегировали логику методу getAllUsers из сервиса UsersService   @Body() ID_user.
+        const user = await req.user;                //После проверки accessTokena в JwtAuthGuard, если токен валиден, из запроса получим поле user с данными пользователя.
+        console.log(`Данные на удаление, user: ${JSON.stringify(user.email)}`);
+        console.log(`Данные на удаление, dto: ${JSON.stringify(dto)}`);
+        return this.authService.deleteUser(dto, user);
     }
 }

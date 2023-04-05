@@ -17,7 +17,7 @@ export class TokenService {
 
     // Сгенерируем токены.
     async generateTokens(payload){   // Payload - это информация, которая будет спрятана в токене.
-        const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {expiresIn: '60m'});      //  Создадим jwt подпись из payload с ключем из переменной окружения JWT_ACCESS_SECRET, это accessToken. Срок жизни токена: 30 минут
+        const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {expiresIn: '3h'});      //  Создадим jwt подпись из payload с ключем из переменной окружения JWT_ACCESS_SECRET, это accessToken. Срок жизни токена: 30 минут
         const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {expiresIn: '30d'});    //  Это refreshToken. Срок жизни токена: 30 дней
         console.log('Создана пара токенов');
         return {    // Возвращаем токены.

@@ -35,7 +35,7 @@ export class RolesGuard implements CanActivate {  // Наследуем клас
             if (bearer !== 'Bearer' || !token) {    //  Если префикс не Bearer или отсутствует токен, пользователь не авторизован.
                 throw new UnauthorizedException({message: 'Пользователь не авторизован'})
             }
-            const secret = this.configService.get<string>('JWT_REFRESH_SECRET');   // Возьмем из переменной окружения секрет для токена.
+            const secret = this.configService.get<string>('JWT_ACCESS_SECRET');   // Возьмем из переменной окружения секрет для токена.
             const user = this.jwtService.verify(token, { secret });   // Проверяем токен accessToken.
             req.user = user;  // Вставляем пользователя в объект Request - ответ.
             return requiredRoles.some(role => role === user.roles.value); // Проверяем обладает ли пользователь искомой ролью, если да, то возвращаем true.  //return user.roles.some(role => requiredRoles.includes(role.value));

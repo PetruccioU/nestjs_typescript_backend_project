@@ -13,6 +13,7 @@ import {CreateProfileDto} from "./dto/create-profile.dto";
 import {UpdateUserDto} from "../users/dto/update-user.dto";
 import * as bcrypt from 'bcryptjs';
 import e from "express";
+import {TokenService} from "../token/token.service";
 
 
 @Injectable()
@@ -21,7 +22,7 @@ export class ProfileService {
                 @InjectModel(Role) private roleRepository: typeof Role, // Введём модель Role
                 @InjectModel(User) private userRepository: typeof User,  // Введём модель User
                 private roleService: RolesService,        // Введём сервис ролей
-                //private usersService: UsersService        // Введём сервис пользователя
+                private tokenService: TokenService        // Введём сервис токенов
     ) {}
 
     // Сервис авторизации не зависит от сервиса профиля. А сервис профиля - зависит от сервиса авторизации.
@@ -31,8 +32,8 @@ export class ProfileService {
     async createUser(dto: CreateUserDto, dtoProfile: UpdateProfileDto) {      // Функция принимает параметр dto, ждет объект класса CreateUserDto.
         const user = await this.userRepository.create(dto);                   // Обращаемся к нашей базе данных и передаем ей объект dto для создания пользователя.
         const role = await this.roleService.getRoleByValue('USER');       // при создании пользователя по умолчанию добавим ему роль USER (заранее добавив роль USER в таблицу roles).
-        await user.$set('roles', [role.Id_role])    // !!!!!!!!!!!!!!!!!!!!!!!!!! 'roles', [role.Id_role] -> roles: [role]
-        user.roles = [role]
+        await user.$set('roles', role.Id_role)    // Устанавливаем соответствие между полями таблицы    !!!!!!!!!!!!!!!!!!!!!!!!!! 'roles', [role.Id_role] -> roles: [role]
+        user.roles = role  // [role]                        // Сохраняем в поле ролией пользователя, объект роли.
         //await user.update({ Id_role: role.Id_role, roles: [role] });                      //  Обновляем значение роли в таблице пользователей
         if (!dtoProfile){const profile = await this.profileRepository.create({});   // Если dto пустое создаём пользователю пустой профиль.
             await profile.update({ ID_user: user.ID_user });                               // Обновляем значение поля ID_user в таблице профилей, на id нового пользователя.
@@ -42,8 +43,6 @@ export class ProfileService {
         await profile.update({ ID_user: user.ID_user });
         return user;                                                           // возвращаем пользователя.
     }
-
-
 
 
     // Функции для админа:
@@ -62,7 +61,7 @@ export class ProfileService {
         const role = await this.roleService.getRoleByValue(dto.value);   // Находим роль по ее наименованию из таблички ролей.
         if (role && user) {                    // Проверяем нашлись ли пользователь и роль.
             await user.update({ Id_role: role.Id_role });
-            await user.update({ roles: [role] });
+            await user.update({ roles: role });    // [role]
             // await user.$set('Id_role', [role.Id_role]); // в поле roles таблицы пользователей добавим id его новой роли,
             // await user.$set('roles', [role]);
             return user//dto;  // выведем dto
@@ -70,7 +69,33 @@ export class ProfileService {
         throw new HttpException('Пользователь или роль не найдены', HttpStatus.NOT_FOUND)
     }
 
+
     // Функции для аутентифицированного пользователя:
+    // Обновление токенов по сохранённому refreshToken'у.
+    async refreshTokenMethod(refreshToken) {
+        if(!refreshToken){
+            throw new UnauthorizedException({massage: 'Токен отсутствует в запросе'});
+        }else {
+            const tokenFromDB = await this.tokenService.findRefreshToken(refreshToken);
+            const userData = await this.tokenService.validateRefreshToken(refreshToken);
+            if(!tokenFromDB || !userData){
+                throw new UnauthorizedException({massage: 'Токен отсутствует в базе данных или не действителен'});
+            }else {
+                const user = await this.userRepository.findByPk(tokenFromDB.ID_user); // Найдем ID пользователя по токену, который принадлежит этому пользователю.
+                const role = await this.roleRepository.findByPk(user.Id_role);
+                await user.$set('roles', user.Id_role)    // Устанавливаем соответствие между полями таблицы
+                user.roles = role  // [role]                        // Сохраняем в поле ролией пользователя, объект роли.
+
+                const tokens = await this.tokenService.generateTokens({email:user.email, password: user.password, roles: user.roles});
+                await this.tokenService.save_or_refresh_refreshToken(user.ID_user, tokens.refreshToken);
+                console.log(`Был обновлён accessToken, пользователя: ${tokenFromDB.ID_user}.`);
+                return {...tokens, user}
+            }
+        }
+    }
+
+
+
     // Просмотреть профили всех пользователей.
     getAllProfiles() {
         return this.profileRepository.findAll();
@@ -80,20 +105,27 @@ export class ProfileService {
     // Функции для админа или себя:
     // Обновим пользователя.
     async updateUser(id, dtoUser: UpdateUserDto): Promise<any> {
+        const checkEmail = await this.userRepository.findOne({where:{email:dtoUser.email}}) // Проверим, вдруг почта на которую мы хотим поменять, уже используется.
+        if (checkEmail){   // Сделаем проверку, вдруг пользователь с таким email уже существует.
+            throw new HttpException(`Пользователь с почтовым адресом ${dtoUser.email} уже существует`, HttpStatus.BAD_REQUEST)
+        }
         const userFind = await this.userRepository.findByPk(id);
-        const hashPassword = await bcrypt.hash(dtoUser.password, 5);
-        await userFind.update({ email: dtoUser.email, password: hashPassword });
-        console.log(`Пользователь ${id} изменён.`)
-        return userFind;
+        const role = await this.roleRepository.findByPk(userFind.Id_role);
+        const hashPassword = await bcrypt.hash(dtoUser.password, 5);       // Хэшируем новый пароль.
+        await userFind.update({...dtoUser, password: hashPassword});   // Обновляем пользователя.
+        await userFind.$set('roles', userFind.Id_role)    // Устанавливаем соответствие между полями таблицы
+        userFind.roles = role  // [role]                        // Сохраняем в поле ролией пользователя, объект роли.
+        // Генерируем токены данные о пользователе: почта, пароль, роль пользователя:
+        const tokens = await this.tokenService.generateTokens({email:userFind.email, password: userFind.password, roles: userFind.roles});
+        await this.tokenService.save_or_refresh_refreshToken(userFind.ID_user, tokens.refreshToken);    // Обновим refreshToken в табличке token.
+        console.log(`Пользователь ${id} изменён.`);
+        return {...tokens, userFind}  // Возвращаем токены и пользователя.
     }
 
     // Удалить пользователя и его профиль
-    async deleteUser(id): Promise<void> {
-        if (!id) {
-            throw new Error('ID пользователя не определён.');
-        }
-        await this.profileRepository.destroy({where: {ID_user: id}});
-        await this.userRepository.destroy({where: {ID_user: id}});
-        console.log(`Пользователь ${id} удалён.`)
-    }
+    async deleteUser(UserId): Promise<void> {
+        await this.profileRepository.destroy({where: {ID_user: UserId}});
+        await this.userRepository.destroy({where: {ID_user: UserId}});
+        console.log(`Пользователь ${UserId} удалён.`)}
 }
+

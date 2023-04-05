@@ -52,7 +52,6 @@ export class AuthService {
         return {...tokens, user}  // Возвращаем токены и пользователя
     }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Функции для зарегистрированных пользователей:
     // Выполним активацию пользователя. (Перейти по ссылке из активационного письма, в данном случае просто устанавливает поле isActivated в true)
@@ -92,21 +91,7 @@ export class AuthService {
 
     // Обновление токена. Если токен валиден и в таблице. Только себя. Вместо того чтобы опять логиниться по истечении срока действии AccessToken'a, его можно просто обновить, по валидному refreshToken'y.
     async refreshTokenM(refreshToken) {
-        if(!refreshToken){
-            throw new UnauthorizedException({massage: 'Токен отсутствует в запросе'});
-        }else {
-            const tokenFromDB = await this.tokenService.findRefreshToken(refreshToken);
-            const userData = await this.tokenService.validateRefreshToken(refreshToken);
-            if(!tokenFromDB || !userData){
-                throw new UnauthorizedException({massage: 'Токен отсутствует в базе данных или не действителен'});
-            }else {
-                const user = await this.userRepository.findByPk(tokenFromDB.ID_user); // Найдем ID пользователя по токену, который принадлежит этому пользователю.
-                const tokens = await this.tokenService.generateTokens({email:user.email, password: user.password, roles: user.roles});
-                await this.tokenService.save_or_refresh_refreshToken(user.ID_user, tokens.refreshToken);
-                console.log(`Был обновлён accessToken, пользователя: ${tokenFromDB.ID_user}.`);
-                return {...tokens, user}
-            }
-        }
+        return await this.profileService.refreshTokenMethod(refreshToken);
     }
 
 
@@ -126,7 +111,6 @@ export class AuthService {
             }
         }
     }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Функции только для админа:
@@ -149,27 +133,26 @@ export class AuthService {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Функции для админа либо себя:
     // Обновление пользователя.
-    async updateUser(dto, token ){
-        if(!dto.ID_user){  // Если в dto отсутствует id, изменяем самого себя:
-            const decodedToken = await this.tokenService.validateAccessToken(token); // Валидируем токен и вернем объект с полями пользователя.
-            const email = decodedToken.email;
-            const findUser = await this.userRepository.findOne({where:{email: email}}); // Из того что нам вернул гард, по емэйлу вытаскиваем пользователя - себя.
-            return await this.profileService.updateUser(findUser.ID_user, dto); // Вызываем метод для изменения пользователя, с id из ранее найденного пользователя() и данными(емэйл и пароль) из dto
-        }else{  // В обратном случае администратор передаёт id пользователя и данные для изменения пользователя в dto.
+    async updateUser(dto, userData ){
+        if (Object.keys(userData).length === 0) {
+            // Если userData пустой объект, пользователя обновляет администратор(id пользователя передаётся администратором в dto).
             return await this.profileService.updateUser(dto.ID_user, dto);
+        } else {
+            // В обратном случае, пользователь изменяет себя сам.
+            const findUser = await this.userService.getUserByEmail(userData.email); // id пользователя находим по емэйлу из тела запроса.
+            return await this.profileService.updateUser(findUser.ID_user, dto); // Вызываем метод для изменения пользователя, с id из ранее найденного пользователя() и данными(емэйл и пароль) из dto.
         }
     }
 
     // Удаление пользователя.
-    async deleteUser(dto,token) {
-        if(!dto){  // Если dto отсутствует, удаляем самого себя:
-            const decodedToken = await this.tokenService.validateAccessToken(token);
-            const email = decodedToken.email;
-            const findUser = await this.userRepository.findOne({where:{email: email}}); // Из того что нам вернул гард, по емэйлу вытаскиваем пользователя.
-            return await this.profileService.deleteUser(findUser.ID_user);           // По найденному id удаляем себя.
-        }else{  // В обратном случае администратор передаёт id пользователя на удаление.
-            return await this.profileService.deleteUser(dto.ID_user);
+    async deleteUser(dtoAdmin, userData) {
+        if (Object.keys(dtoAdmin).length === 0) {
+            // Если dtoAdmin пустой объект, удаляем себя.
+            const findUser = await this.userService.getUserByEmail(userData.email);
+            await this.profileService.deleteUser(findUser.ID_user);
+        } else {
+            // В обратном случае, удаляем того пользователя, что передан админом.
+            await this.profileService.deleteUser(dtoAdmin.ID_user);
         }
     }
 }
-
